@@ -22,7 +22,7 @@ jobs:
 
       - name: 패키지 설치
         run: |
-          pip install playwright requests
+          pip install playwright requests beautifulsoup4
           playwright install --with-deps chromium
 
       - name: 캠핑장 확인
