@@ -18,6 +18,7 @@ import os
 import re
 import json
 import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 URL = (
@@ -51,41 +52,44 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False)
 
 
-def fetch_page_text():
+def fetch_calendar_html():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(locale="ko-KR")
         page.goto(URL, wait_until="networkidle", timeout=30000)
         page.wait_for_timeout(3000)  # 자바스크립트가 달력을 다 채울 시간을 여유있게 줌
-        text = page.inner_text("body")
+        html = page.content()
         browser.close()
-        return text
+        return html
 
 
 def main():
     state = load_state()
 
     try:
-        text = fetch_page_text()
+        html = fetch_calendar_html()
     except Exception as e:
         print("페이지를 불러오는 데 실패했습니다:", e)
         return
 
-    # ── 1차 버전: 실제 내용을 로그로 확인하기 위한 출력 ──────────
-    print("=== 페이지에서 읽은 텍스트 (앞부분 3000자) ===")
-    print(text[:3000])
+    soup = BeautifulSoup(html, "html.parser")
+
+    # "예약완료"가 들어있는 테이블 = 달력 테이블일 가능성이 높음
+    target_table = None
+    for t in soup.find_all("table"):
+        if "예약완료" in t.get_text():
+            target_table = t
+            break
+
+    if target_table is None:
+        print("달력 테이블을 찾지 못했습니다. 전체 테이블 개수:", len(soup.find_all("table")))
+        return
+
+    print("=== 달력 테이블 HTML (앞부분 6000자) ===")
+    print(str(target_table)[:6000])
     print("=== 여기까지 ===")
 
-    # 아주 단순한 임시 판정 (다음 버전에서 정확하게 다듬을 예정)
-    available = (TARGET_DAY in text) and ("예약완료" not in text)
-    was_available = state.get("available", False)
-
-    print(f"임시 판정 결과: available={available}")
-
-    if available and not was_available:
-        send_telegram(f"🏕️ {TARGET_DAY}일에 빈자리가 생겼을 수도 있어요! 확인해보세요:\n{URL}")
-
-    state["available"] = available
+    # 이번 실행은 정찰용이라 알림/상태 판정은 하지 않음
     save_state(state)
 
 
