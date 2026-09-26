@@ -2,7 +2,7 @@ name: 캠핑장 빈자리 확인
 
 on:
   schedule:
-    - cron: '*/30 * * * *'   # 브라우저를 띄우는 방식이라 무거워서 30분 간격으로
+    - cron: '*/5 * * * *'   # 5분마다 실행
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
 
       - name: 패키지 설치
         run: |
-          pip install playwright requests beautifulsoup4
+          pip install playwright requests
           playwright install --with-deps chromium
 
       - name: 캠핑장 확인
