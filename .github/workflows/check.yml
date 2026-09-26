@@ -2,7 +2,7 @@ name: FM코리아 핫딜 키워드 알림
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # 10분마다 실행
+    - cron: '*/5 * * * *'   # 5분마다 실행
   workflow_dispatch:          # 수동으로도 실행 가능 (Actions 탭에서 Run workflow)
 
 permissions:
