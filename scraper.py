@@ -38,7 +38,14 @@ HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-    )
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,*/*;q=0.8"
+    ),
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Referer": "https://www.fmkorea.com/",
+    "Connection": "keep-alive",
 }
 
 # 글 링크 패턴: https://www.fmkorea.com/1234567890 또는 /1234567890 형태
@@ -112,6 +119,10 @@ def fetch_posts():
 def main():
     first_run = not os.path.exists(STATE_FILE)
     seen = load_seen()
+
+    if not os.path.exists(STATE_FILE):
+        # git add가 실패하지 않도록 파일을 먼저 만들어둔다
+        save_seen(seen)
 
     try:
         posts = fetch_posts()
