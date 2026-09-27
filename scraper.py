@@ -23,6 +23,7 @@ BOARD_URL = "https://www.fmkorea.com/hotdeal"
 # 감지하고 싶은 키워드. 제목에 이 중 하나라도 포함되면 알림이 옵니다.
 KEYWORDS = [
     "키보드",
+    "모니터",
     "모달",
     "마우스",
     "컬쳐랜드",
@@ -44,8 +45,16 @@ HEADERS = {
         "image/avif,image/webp,*/*;q=0.8"
     ),
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Referer": "https://www.fmkorea.com/",
+    "Accept-Encoding": "gzip, deflate, br",
     "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
 }
 
 # 글 링크 패턴: https://www.fmkorea.com/1234567890 또는 /1234567890 형태
@@ -87,8 +96,23 @@ def send_telegram(text):
 
 
 def fetch_posts():
-    """핫딜 게시판에서 (글번호, 제목, 링크) 목록을 뽑아온다."""
-    res = requests.get(BOARD_URL, headers=HEADERS, timeout=15)
+    """핫딜 게시판에서 (글번호, 제목, 링크) 목록을 뽑아온다.
+
+    사람이 브라우저로 들어가는 것처럼, 먼저 메인 페이지를 한 번 들른 뒤
+    (쿠키를 받고) 핫딜 게시판으로 이동하는 순서를 흉내낸다.
+    """
+    session = requests.Session()
+    session.headers.update(HEADERS)
+
+    # 1) 메인 페이지 먼저 방문 (쿠키 확보 + 자연스러운 접속 흐름)
+    session.get("https://www.fmkorea.com/", timeout=15)
+
+    # 2) 메인에서 들어온 것처럼 Referer를 붙여서 핫딜 게시판 요청
+    res = session.get(
+        BOARD_URL,
+        headers={"Referer": "https://www.fmkorea.com/"},
+        timeout=15,
+    )
     res.raise_for_status()
     soup = BeautifulSoup(res.text, "html.parser")
 
