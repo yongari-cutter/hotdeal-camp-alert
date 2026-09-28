@@ -30,7 +30,6 @@ URL = (
 # 형식: ("date_YYYYMMDD", "사람이 보기 좋은 이름")
 TARGET_DATES = [
     ("date_20261004", "10월 4일"),
-    ("date_20261006", "10월 6일 (검증용 테스트)"),
 ]
 
 STATE_FILE = "camp_state.json"
