@@ -1,8 +1,6 @@
 name: FM코리아 핫딜 키워드 알림
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'   # 5분마다 실행
   workflow_dispatch:          # 수동으로도 실행 가능 (Actions 탭에서 Run workflow)
 
 permissions:
@@ -21,7 +19,9 @@ jobs:
           python-version: '3.11'
 
       - name: 패키지 설치
-        run: pip install -r requirements.txt
+        run: |
+          pip install requests beautifulsoup4 playwright
+          playwright install --with-deps chromium
 
       - name: 핫딜 확인 및 알림
         env:
