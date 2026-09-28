@@ -16,6 +16,7 @@ import re
 import json
 import requests
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 # ── 설정 ────────────────────────────────────────────────
 BOARD_URL = "https://www.fmkorea.com/hotdeal"
@@ -34,28 +35,6 @@ KEYWORDS = [
 ]
 
 STATE_FILE = "seen_ids.json"
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-    ),
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;q=0.9,"
-        "image/avif,image/webp,*/*;q=0.8"
-    ),
-    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "same-origin",
-    "Sec-Fetch-User": "?1",
-    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-}
 
 # 글 링크 패턴: https://www.fmkorea.com/1234567890 또는 /1234567890 형태
 POST_LINK_RE = re.compile(r"^(?:https?://www\.fmkorea\.com)?/?(\d{6,})(?:\?.*)?$")
@@ -98,23 +77,17 @@ def send_telegram(text):
 def fetch_posts():
     """핫딜 게시판에서 (글번호, 제목, 링크) 목록을 뽑아온다.
 
-    사람이 브라우저로 들어가는 것처럼, 먼저 메인 페이지를 한 번 들른 뒤
-    (쿠키를 받고) 핫딜 게시판으로 이동하는 순서를 흉내낸다.
+    requests 라이브러리로는 계속 430(차단)이 나서,
+    진짜 크롬 브라우저(Playwright)로 접속해서 가져오는 방식으로 바꿈.
     """
-    session = requests.Session()
-    session.headers.update(HEADERS)
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(locale="ko-KR")
+        page.goto(BOARD_URL, wait_until="networkidle", timeout=30000)
+        html = page.content()
+        browser.close()
 
-    # 1) 메인 페이지 먼저 방문 (쿠키 확보 + 자연스러운 접속 흐름)
-    session.get("https://www.fmkorea.com/", timeout=15)
-
-    # 2) 메인에서 들어온 것처럼 Referer를 붙여서 핫딜 게시판 요청
-    res = session.get(
-        BOARD_URL,
-        headers={"Referer": "https://www.fmkorea.com/"},
-        timeout=15,
-    )
-    res.raise_for_status()
-    soup = BeautifulSoup(res.text, "html.parser")
+    soup = BeautifulSoup(html, "html.parser")
 
     posts = []
     seen_on_page = set()
