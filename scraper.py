@@ -83,9 +83,18 @@ def fetch_posts():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(locale="ko-KR")
-        page.goto(BOARD_URL, wait_until="networkidle", timeout=30000)
+        # networkidle은 광고 등 배경 요청 때문에 끝까지 안 걸릴 수 있어서
+        # domcontentloaded(HTML 파싱 완료 시점)로 대신 기다림
+        response = page.goto(BOARD_URL, wait_until="domcontentloaded", timeout=30000)
+        status = response.status if response else None
+        print(f"응답 상태 코드: {status}")
+        page.wait_for_timeout(2000)
         html = page.content()
+        print(f"받은 HTML 길이: {len(html)}자")
         browser.close()
+
+    if status is not None and status >= 400:
+        raise RuntimeError(f"HTTP {status} 응답을 받았습니다 (차단으로 추정)")
 
     soup = BeautifulSoup(html, "html.parser")
 
